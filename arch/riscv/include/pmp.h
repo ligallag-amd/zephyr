@@ -17,6 +17,19 @@
 	(((dt_attr) & DT_MEM_RISCV_TYPE_IO_W) ? PMP_W : 0) |	\
 	(((dt_attr) & DT_MEM_RISCV_TYPE_IO_X) ? PMP_X : 0))
 
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+struct custom_pmp_entries {
+        unsigned long addr;
+        unsigned long size;
+        uint8_t flags;
+};
+
+struct custom_n_pmp_entries {
+        unsigned int nentries;
+        struct custom_pmp_entries *entries;
+};
+#endif
+
 void z_riscv_pmp_init(void);
 void z_riscv_pmp_kernelmode_prepare(struct k_thread *thread);
 void z_riscv_pmp_kernelmode_enable(struct k_thread *thread);

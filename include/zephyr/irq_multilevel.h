@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#if defined(CONFIG_MULTI_LEVEL_INTERRUPTS) || defined(__DOXYGEN__)
+#if (defined(CONFIG_MULTI_LEVEL_INTERRUPTS) && !defined(CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS)) || defined(__DOXYGEN__)
 
 typedef union _z_irq {
 	/* Zephyr multilevel-encoded IRQ */

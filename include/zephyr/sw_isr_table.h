@@ -97,7 +97,10 @@ struct _irq_parent_entry {
  * @return Software ISR table offset of the interrupt controller
  */
 #define INTC_INST_ISR_TBL_OFFSET(inst)                                                             \
-	(INTC_BASE_ISR_TBL_OFFSET(DT_DRV_INST(inst)) + (inst * CONFIG_MAX_IRQ_PER_AGGREGATOR))
+	COND_CODE_1(IS_ENABLED(CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS),                              \
+		    (DT_INTC_OFFSET(DT_DRV_INST(inst))),                                           \
+	            (INTC_BASE_ISR_TBL_OFFSET(DT_DRV_INST(inst)) +                                 \
+		     (inst * CONFIG_MAX_IRQ_PER_AGGREGATOR)))
 
 /**
  * @brief Get the SW ISR table offset for a child interrupt controller

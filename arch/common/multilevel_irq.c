@@ -11,12 +11,14 @@
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/util.h>
 
+#ifndef CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS
 BUILD_ASSERT(CONFIG_MAX_IRQ_PER_AGGREGATOR < BIT(CONFIG_2ND_LEVEL_INTERRUPT_BITS),
 	     "L2 bits not enough to cover the number of L2 IRQs");
 #ifdef CONFIG_3RD_LEVEL_INTERRUPTS
 BUILD_ASSERT(CONFIG_MAX_IRQ_PER_AGGREGATOR < BIT(CONFIG_3RD_LEVEL_INTERRUPT_BITS),
 	     "L3 bits not enough to cover the number of L3 IRQs");
 #endif /* CONFIG_3RD_LEVEL_INTERRUPTS */
+#endif /* !CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS */
 
 /**
  * @brief Get the aggregator that's responsible for the given irq
@@ -27,6 +29,14 @@ BUILD_ASSERT(CONFIG_MAX_IRQ_PER_AGGREGATOR < BIT(CONFIG_3RD_LEVEL_INTERRUPT_BITS
  */
 static const struct _irq_parent_entry *get_intc_entry_for_irq(unsigned int irq)
 {
+#ifdef CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS
+	/* Find an aggregator entry that irq in range */
+	STRUCT_SECTION_FOREACH_ALTERNATE(intc_table, _irq_parent_entry, intc) {
+		if ((irq >= intc->offset) && (irq < intc->offset + CONFIG_MAX_IRQ_PER_AGGREGATOR)) {
+			return intc;
+		}
+	}
+#else
 	const unsigned int level = irq_get_level(irq);
 
 	/* 1st level aggregator is not registered */
@@ -42,7 +52,7 @@ static const struct _irq_parent_entry *get_intc_entry_for_irq(unsigned int irq)
 			return intc;
 		}
 	}
-
+#endif
 	return NULL;
 }
 
@@ -71,6 +81,9 @@ unsigned int z_get_sw_isr_irq_from_device(const struct device *dev)
 
 unsigned int z_get_sw_isr_table_idx(unsigned int irq)
 {
+#ifdef CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS
+	unsigned int table_idx = irq;
+#else
 	unsigned int table_idx, local_irq;
 	const struct _irq_parent_entry *intc = get_intc_entry_for_irq(irq);
 	const unsigned int level = irq_get_level(irq);
@@ -85,7 +98,7 @@ unsigned int z_get_sw_isr_table_idx(unsigned int irq)
 		__ASSERT(level == 1, "can't find an aggregator to handle irq(%X)", irq);
 		table_idx = irq;
 	}
-
+#endif
 	table_idx -= CONFIG_GEN_IRQ_START_VECTOR;
 
 	__ASSERT(table_idx < IRQ_TABLE_SIZE, "table_idx(%d) < IRQ_TABLE_SIZE(%d)", table_idx,

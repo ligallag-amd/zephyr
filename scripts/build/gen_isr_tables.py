@@ -244,7 +244,7 @@ class gen_isr_config:
         return name in self.__syms
 
     def check_multi_level_interrupts(self):
-        return self.check_sym("CONFIG_MULTI_LEVEL_INTERRUPTS")
+        return self.check_sym("CONFIG_MULTI_LEVEL_INTERRUPTS") and not self.check_sym("CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS")
 
     def check_shared_interrupts(self):
         return self.check_sym("CONFIG_SHARED_INTERRUPTS")

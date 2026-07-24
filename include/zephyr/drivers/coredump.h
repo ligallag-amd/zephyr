@@ -56,6 +56,26 @@ struct coredump_mem_region_node {
 typedef void (*coredump_dump_callback_t)(uintptr_t dump_area, size_t dump_area_size);
 
 /**
+ * @brief Pooled-buffered callback that occurs at dump time with chunking support.
+ * Data copied into dump_area will be included in the dump that is generated.
+ *
+ * This callback supports chunked dumping to reduce memory usage. A single
+ * shared buffer is provided, and the callback can be invoked multiple times
+ * to dump data larger than the buffer size.
+ *
+ * @param dump_area      Pointer to area to copy data into for inclusion in dump
+ * @param dump_area_size Size of available memory at dump_area
+ * @param offset         Byte offset into the logical dump data. First call is 0,
+ *                       subsequent calls provide the cumulative bytes written so far.
+ *
+ * @return Number of bytes written to dump_area. Return 0 to indicate dumping is
+ *         complete. The coredump subsystem will keep calling this callback with
+ *         updated offsets until 0 is returned.
+ */
+typedef size_t (*coredump_dump_callback_pooled_t)(uintptr_t dump_area, size_t dump_area_size,
+	size_t offset);
+
+/**
  * @cond INTERNAL_HIDDEN
  *
  * For internal use only, skip these in public documentation.
@@ -89,6 +109,13 @@ typedef bool (*coredump_device_register_callback_t)(const struct device *dev,
 	coredump_dump_callback_t callback);
 
 /*
+ * Type definition of coredump API function for registering a pooled-buffered
+ * dump callback
+ */
+typedef bool (*coredump_device_register_callback_pooled_t)(const struct device *dev,
+	coredump_dump_callback_pooled_t callback);
+
+/*
  * API which a coredump pseudo-device driver should expose
  */
 __subsystem struct coredump_driver_api {
@@ -96,6 +123,7 @@ __subsystem struct coredump_driver_api {
 	coredump_device_register_memory_t   register_memory;
 	coredump_device_unregister_memory_t unregister_memory;
 	coredump_device_register_callback_t register_callback;
+	coredump_device_register_callback_pooled_t register_callback_pooled;
 };
 
 /**
@@ -156,6 +184,28 @@ static inline bool coredump_device_register_callback(const struct device *dev,
 		(const struct coredump_driver_api *)dev->api;
 
 	return api->register_callback(dev, callback);
+}
+
+/**
+ * @brief Register a pooled-buffered callback to be invoked at dump time
+ *
+ * Use this for COREDUMP_TYPE_CALLBACK_POOLED_BUFFERED devices. The callback
+ * will be invoked multiple times with increasing offsets until it returns 0,
+ * allowing dumping of data larger than the shared buffer size.
+ *
+ * @param dev      Pointer to the device structure for the driver instance.
+ * @param callback Callback to be invoked at dump time
+ *
+ * @return true if registration succeeded
+ * @return false if registration failed
+ */
+static inline bool coredump_device_register_callback_pooled(const struct device *dev,
+	coredump_dump_callback_pooled_t callback)
+{
+	const struct coredump_driver_api *api =
+		(const struct coredump_driver_api *)dev->api;
+
+	return api->register_callback_pooled(dev, callback);
 }
 
 /**

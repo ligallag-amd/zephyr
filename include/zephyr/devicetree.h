@@ -3049,6 +3049,14 @@
 #define DT_MULTI_LEVEL_IRQN_INTERNAL(node_id, idx)                                                 \
 	DT_IRQN_LVL_INTERNAL(node_id, idx, DT_IRQ_LEVEL(node_id))
 
+#define DT_INTC_INST(node_id) DT_CAT(node_id, _INTC_INST)
+
+#define DT_INTC_OFFSET(node_id) (DT_INTC_INST(node_id) * CONFIG_MAX_IRQ_PER_AGGREGATOR)
+
+#define DT_IRQN_PARENT_INTERNAL(node_id, idx)                                                      \
+	(DT_INTC_OFFSET(DT_IRQ_INTC_BY_IDX(node_id, idx)) +                         \
+	 DT_IRQ_BY_IDX(node_id, idx, irq))
+
 /**
  * INTERNAL_HIDDEN @endcond
  */
@@ -3063,8 +3071,10 @@
  */
 #define DT_IRQN_BY_IDX(node_id, idx)                                                               \
 	COND_CODE_1(IS_ENABLED(CONFIG_MULTI_LEVEL_INTERRUPTS),                                     \
-		    (DT_MULTI_LEVEL_IRQN_INTERNAL(node_id, idx)),                                  \
-		    (DT_IRQ_BY_IDX(node_id, idx, irq)))
+		    COND_CODE_1(IS_ENABLED(CONFIG_MULTI_LEVEL_OFFSET_INTERRUPTS),                  \
+				(DT_IRQN_PARENT_INTERNAL(node_id, idx)),                           \
+				(DT_MULTI_LEVEL_IRQN_INTERNAL(node_id, idx))),                     \
+				(DT_IRQ_BY_IDX(node_id, idx, irq)))
 
 /**
  * @brief Get a node's (only) irq number

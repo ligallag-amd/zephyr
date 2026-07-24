@@ -32,6 +32,7 @@ from devicetree import edtlib
 def main():
     global header_file
     global flash_area_num
+    global intc_num
 
     args = parse_args()
 
@@ -41,6 +42,7 @@ def main():
         edt = pickle.load(f)
 
     flash_area_num = 0
+    intc_num = 0
 
     # Create the generated header.
     with open(args.header_out, "w", encoding="utf-8") as header_file:
@@ -407,9 +409,14 @@ def write_interrupts(node: edtlib.Node) -> None:
             return irq_num + 16
         err(f"Invalid interrupt type specified for {irq!r}")
 
+    global intc_num
     idx_vals = []
     name_vals = []
     path_id = node.z_path_id
+
+    if "interrupt-controller" in node.props:
+        idx_vals.append((f"{path_id}_INTC_INST", intc_num))
+        intc_num += 1
 
     if node.interrupts is not None:
         idx_vals.append((f"{path_id}_IRQ_NUM", len(node.interrupts)))
@@ -431,6 +438,9 @@ def write_interrupts(node: edtlib.Node) -> None:
                     f"{path_id}_IRQ_NAME_{str2ident(irq.name)}_VAL_{name}")
                 name_vals.append((name_macro, f"DT_{idx_macro}"))
                 name_vals.append((name_macro + "_EXISTS", 1))
+
+        if "msi-parent" in irq.controller.props:
+            irq.controller = irq.controller.props["msi-parent"].val
 
         idx_controller_macro = f"{path_id}_IRQ_IDX_{i}_CONTROLLER"
         idx_controller_path = f"DT_{irq.controller.z_path_id}"

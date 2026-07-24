@@ -36,6 +36,10 @@
 #include <zephyr/dt-bindings/memory-attr/memory-attr-riscv.h>
 #include <zephyr/mem_mgmt/mem_attr.h>
 
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+#include <pmp.h>
+#endif
+
 #define LOG_LEVEL CONFIG_MPU_LOG_LEVEL
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(mpu);
@@ -98,6 +102,10 @@ void pmp_decode_region(uint8_t cfg_byte, unsigned long *pmp_addr, unsigned int i
 		break;
 	}
 }
+
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+extern const struct custom_n_pmp_entries soc_n_entries;
+#endif
 
 static void print_pmp_entries(unsigned int pmp_start, unsigned int pmp_end,
 			      unsigned long *pmp_addr, unsigned long *pmp_cfg,
@@ -596,8 +604,24 @@ void z_riscv_pmp_init(void)
 	unsigned long pmp_cfg[CONFIG_PMP_SLOTS / PMPCFG_STRIDE] = {0};
 	unsigned int index = 0;
 	unsigned int attr_cnt = 0;
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+	unsigned int i, n;
+	const struct custom_pmp_entries *custom_soc_pmp_ptr;
+#endif
 
 	ARG_UNUSED(attr_cnt);
+
+#ifdef CONFIG_CUSTOM_PMP_ENTRIES
+	n = soc_n_entries.nentries;
+	custom_soc_pmp_ptr = soc_n_entries.entries;
+	for (i = 0; i < n; ++i) {
+	     set_pmp_entry(&index, custom_soc_pmp_ptr->flags,
+			   custom_soc_pmp_ptr->addr,
+			   custom_soc_pmp_ptr->size,
+			   pmp_addr, pmp_cfg, ARRAY_SIZE(pmp_addr));
+	     custom_soc_pmp_ptr++;
+	}
+#endif
 
 #ifdef CONFIG_NULL_POINTER_EXCEPTION_DETECTION_PMP
 	/*

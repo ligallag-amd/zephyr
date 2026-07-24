@@ -30,3 +30,4 @@ properties:
     enum:
       - "COREDUMP_TYPE_MEMCPY"
       - "COREDUMP_TYPE_CALLBACK"
+      - "COREDUMP_TYPE_CALLBACK_POOLED_BUFFERED"

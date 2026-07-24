@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config IMSIC
+	bool "Incoming Message Signalled Interrupt Controller (IMSIC)"
+	default y
+	depends on DT_HAS_RISCV_IMSICS_ENABLED
+	select MULTI_LEVEL_INTERRUPTS
+	select MULTI_LEVEL_OFFSET_INTERRUPTS
+	help
+	  RISC-V Advanced Interrupt Architecture support for external
+	  interrupt lines via Advanced Platform Level Interrupt
+	  Controller (APLIC).
+
+config APLIC
+	bool "RISC-V Advanced Platform Level Interrupt Controller (APLIC)"
+	default y
+	depends on DT_HAS_RISCV_APLIC_ENABLED
+	select MULTI_LEVEL_INTERRUPTS
+	select MULTI_LEVEL_OFFSET_INTERRUPTS
+	help
+	  RISC-V Advanced Interrupt Architecture support for message
+	  signalled interrupts via Incoming Message Signalled Interrupt
+	  Controller (IMSIC).

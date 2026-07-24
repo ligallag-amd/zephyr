@@ -1,0 +1,27 @@
+# Copyright (c) 2025, AMD Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: RISC-V incoming MSI interrupt controller
+
+compatible: "riscv,imsics"
+
+include: [interrupt-controller.yaml, base.yaml]
+
+properties:
+  reg:
+    required: true
+
+  msi-controller:
+    type: boolean
+    required: true
+
+  riscv,num-ids:
+    type: int
+    description: number of MSI IDs supported
+    required: true
+
+  riscv,guest-index-bits:
+    type: int
+
+  "#interrupt-cells":
+    const: 0

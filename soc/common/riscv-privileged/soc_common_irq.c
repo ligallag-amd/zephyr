@@ -11,9 +11,12 @@
  */
 #include <zephyr/irq.h>
 #include <zephyr/irq_multilevel.h>
+#include <zephyr/irq_nextlevel.h>
 
 #include <zephyr/drivers/interrupt_controller/riscv_clic.h>
 #include <zephyr/drivers/interrupt_controller/riscv_plic.h>
+
+#include "sw_isr_common.h"
 
 #if defined(CONFIG_RISCV_HAS_CLIC)
 
@@ -59,6 +62,11 @@ void arch_irq_enable(unsigned int irq)
 		riscv_plic_irq_enable(irq);
 		return;
 	}
+#elif defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
+		irq_enable_next_level(z_get_sw_isr_device_from_irq(irq), irq);
+		return;
+	}
 #endif
 
 	/*
@@ -77,6 +85,11 @@ void arch_irq_disable(unsigned int irq)
 
 	if (level == 2) {
 		riscv_plic_irq_disable(irq);
+		return;
+	}
+#elif defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
+		irq_disable_next_level(z_get_sw_isr_device_from_irq(irq), irq);
 		return;
 	}
 #endif
@@ -98,6 +111,10 @@ int arch_irq_is_enabled(unsigned int irq)
 	if (level == 2) {
 		return riscv_plic_irq_is_enabled(irq);
 	}
+#elif defined(CONFIG_RISCV_HAS_APLIC) || defined(CONFIG_RISCV_HAS_IMSIC)
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
+		return irq_line_is_enabled_next_level(z_get_sw_isr_device_from_irq(irq), irq);
+	}
 #endif
 
 	mie = csr_read(mie);
@@ -105,16 +122,22 @@ int arch_irq_is_enabled(unsigned int irq)
 	return !!(mie & (1 << irq));
 }
 
-#if defined(CONFIG_RISCV_HAS_PLIC)
+#if defined(CONFIG_RISCV_HAS_PLIC) || defined(CONFIG_RISCV_HAS_APLIC)
 void z_riscv_irq_priority_set(unsigned int irq, unsigned int prio, uint32_t flags)
 {
+#if defined(CONFIG_RISCV_HAS_PLIC)
 	unsigned int level = irq_get_level(irq);
 
 	if (level == 2) {
 		riscv_plic_set_priority(irq, prio);
 	}
+#else
+	if (irq >= CONFIG_MAX_IRQ_PER_AGGREGATOR) {
+		 irq_set_priority_next_level(z_get_sw_isr_device_from_irq(irq), irq, prio, flags);
+	}
+#endif
 }
-#endif /* CONFIG_RISCV_HAS_PLIC */
+#endif /* CONFIG_RISCV_HAS_PLIC || CONFIG_RISCV_HAS_APLIC */
 #endif /* CONFIG_RISCV_HAS_CLIC */
 
 #if defined(CONFIG_RISCV_SOC_INTERRUPT_INIT)

@@ -19,13 +19,12 @@ config MULTI_LEVEL_INTERRUPTS
 	  controller".)
 
 if MULTI_LEVEL_INTERRUPTS
-config 1ST_LEVEL_INTERRUPT_BITS
-	int "Total number of first level interrupt bits"
-	range 1 32
-	default 8
+
+config MULTI_LEVEL_OFFSET_INTERRUPTS
+	bool "Multi-level interrupt support (base + offset encoded)"
 	help
-	  The number of bits to use of the 32 bit interrupt mask for first
-	  tier interrupts.
+	  Encode multilevel interrupts as intc base + offset, rather than
+	  bits.
 
 config MAX_IRQ_PER_AGGREGATOR
 	int "Max IRQs per interrupt aggregator"
@@ -34,6 +33,16 @@ config MAX_IRQ_PER_AGGREGATOR
 	help
 	  The maximum number of interrupt inputs to any aggregator in the
 	  system.
+
+if !MULTI_LEVEL_OFFSET_INTERRUPTS
+
+config 1ST_LEVEL_INTERRUPT_BITS
+	int "Total number of first level interrupt bits"
+	range 1 32
+	default 8
+	help
+	  The number of bits to use of the 32 bit interrupt mask for first
+	  tier interrupts.
 
 config 2ND_LEVEL_INTERRUPTS
 	bool "Second-level interrupt support"
@@ -141,5 +150,7 @@ aggregator = 6
 rsource "Kconfig.multilevel.aggregator_template"
 aggregator = 7
 rsource "Kconfig.multilevel.aggregator_template"
+
+endif
 
 endif

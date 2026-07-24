@@ -276,6 +276,25 @@ config CLIC_SUPPORT_INTERRUPT_LEVEL
 	  levels. This option handles interrupt level in ISR to ensure proper
 	  nested ISR exits.
 
+config RISCV_HAS_APLIC
+	bool
+	depends on RISCV_PRIVILEGED
+	help
+	  Does the SOC provide support for a Advanced Platform Level Interrupt Controller (APLIC).
+
+config RISCV_HAS_IMSIC
+	bool
+	depends on RISCV_PRIVILEGED
+	help
+	  Does the SOC provide support for a Incoming Message Signalled Interrupt Controller (IMSIC).
+
+config RISCV_SOC_EXCEPTION_FROM_IRQ
+	bool
+	help
+	  Option selected by SoCs that require a custom mechanism to check if
+	  an exception is the result of an interrupt or not. If selected,
+	  __soc_is_irq() needs to be implemented by the SoC.
+
 config RISCV_SOC_INTERRUPT_INIT
 	bool "SOC-based interrupt initialization"
 	help
@@ -434,6 +453,11 @@ config PMP_UNLOCK_ROM_FOR_DEBUG
 	  to set breakpoints and read instructions. NULL pointer guards
 	  and stack guards remain locked to catch critical bugs during
 	  development. Only enable for debug builds.
+
+config CUSTOM_PMP_ENTRIES
+	bool "Select custom PMP entries"
+	help
+	  This option provides custom PMP entries to be programmed
 
 endif #RISCV_PMP
 

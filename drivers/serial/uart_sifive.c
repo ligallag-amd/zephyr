@@ -411,7 +411,8 @@ static void uart_sifive_irq_cfg_func_0(void)
 {
 	IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
 		    uart_sifive_irq_handler, DEVICE_DT_INST_GET(0),
-		    0);
+		    COND_CODE_1(DT_INST_IRQ_HAS_CELL(0, sense),
+		    (DT_INST_IRQ(0, sense)), (0)));
 
 	irq_enable(DT_INST_IRQN(0));
 }
@@ -453,7 +454,8 @@ static void uart_sifive_irq_cfg_func_1(void)
 {
 	IRQ_CONNECT(DT_INST_IRQN(1), DT_INST_IRQ(1, priority),
 		    uart_sifive_irq_handler, DEVICE_DT_INST_GET(1),
-		    0);
+		    COND_CODE_1(DT_INST_IRQ_HAS_CELL(1, sense),
+		    (DT_INST_IRQ(1, sense)), (0)));
 
 	irq_enable(DT_INST_IRQN(1));
 }

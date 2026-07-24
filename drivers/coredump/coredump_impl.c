@@ -9,9 +9,20 @@
 
 #define DT_DRV_COMPAT zephyr_coredump
 
+/**
+ * Size of the shared buffer for callback-type coredump devices.
+ * This buffer is reused across all callback devices to reduce memory usage.
+ * Callbacks that need to dump more data than this size will be invoked
+ * multiple times with increasing offsets.
+ */
+#ifndef CONFIG_COREDUMP_DEVICE_SHARED_BUFFER_SIZE
+#define CONFIG_COREDUMP_DEVICE_SHARED_BUFFER_SIZE (64 * 1024)
+#endif
+
 enum COREDUMP_TYPE {
 	COREDUMP_TYPE_MEMCPY = 0,
 	COREDUMP_TYPE_CALLBACK = 1,
+	COREDUMP_TYPE_CALLBACK_POOLED_BUFFERED = 2,
 };
 
 struct coredump_config {
@@ -31,7 +42,17 @@ struct coredump_data {
 
 	/* Callback to be invoked at time of dump */
 	coredump_dump_callback_t dump_callback;
+
+	/* Callback for pooled-buffered type with chunking support */
+	coredump_dump_callback_pooled_t dump_callback_pooled;
 };
+
+/*
+ * Single shared buffer for all callback-type coredump devices.
+ * This significantly reduces memory usage compared to allocating
+ * separate buffers per device.
+ */
+static uint8_t coredump_shared_buffer[CONFIG_COREDUMP_DEVICE_SHARED_BUFFER_SIZE] __aligned(4);
 
 static void coredump_impl_dump(const struct device *dev)
 {
@@ -46,6 +67,29 @@ static void coredump_impl_dump(const struct device *dev)
 			/* Invoke callback to allow consumer to fill array with desired data */
 			data->dump_callback(start_address, size);
 			coredump_memory_dump(start_address, start_address + size);
+		}
+	} else if (config->type == COREDUMP_TYPE_CALLBACK_POOLED_BUFFERED) {
+		/* Pooled-buffered callback: Uses shared buffer with chunking */
+		if (data->dump_callback_pooled) {
+			uintptr_t buffer_addr = (uintptr_t)coredump_shared_buffer;
+			size_t buffer_size = sizeof(coredump_shared_buffer);
+			size_t offset = 0;
+			size_t bytes_written;
+
+			/*
+			 * Invoke callback repeatedly until it returns 0.
+			 * Each iteration:
+			 *   1. Callback fills shared buffer with data starting at 'offset'
+			 *   2. Dump that chunk to the backend
+			 *   3. Increment offset by bytes written
+			 */
+			do {
+				bytes_written = data->dump_callback_pooled(buffer_addr, buffer_size, offset);
+				if (bytes_written > 0) {
+					coredump_memory_dump(buffer_addr, buffer_addr + bytes_written);
+					offset += bytes_written;
+				}
+			} while (bytes_written > 0);
 		}
 	} else { /* COREDUMP_TYPE_MEMCPY */
 		/*
@@ -118,6 +162,20 @@ static bool coredump_impl_register_callback(const struct device *dev,
 	return true;
 }
 
+static bool coredump_impl_register_callback_pooled(const struct device *dev,
+	coredump_dump_callback_pooled_t callback)
+{
+	const struct coredump_config *config = dev->config;
+	struct coredump_data *data = dev->data;
+
+	if (config->type != COREDUMP_TYPE_CALLBACK_POOLED_BUFFERED) {
+		return false;
+	}
+
+	data->dump_callback_pooled = callback;
+	return true;
+}
+
 static int coredump_init(const struct device *dev)
 {
 	struct coredump_data *data = dev->data;
@@ -131,6 +189,7 @@ static DEVICE_API(coredump, coredump_api) = {
 	.register_memory = coredump_impl_register_memory,
 	.unregister_memory = coredump_impl_unregister_memory,
 	.register_callback = coredump_impl_register_callback,
+	.register_callback_pooled = coredump_impl_register_callback_pooled,
 };
 
 #define INIT_REGION(node_id, prop, idx) DT_PROP_BY_IDX(node_id, prop, idx),
