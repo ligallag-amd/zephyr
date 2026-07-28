@@ -375,6 +375,7 @@ void spi_context_buffers_setup(struct spi_context *ctx,
 	ctx->rx_buf = (uint8_t *)
 		spi_context_get_next_buf(&ctx->current_rx, &ctx->rx_count,
 					 &ctx->rx_len, dfs);
+	__ASSERT_NO_MSG(ctx->rx_buf != (uint8_t *)(uintptr_t)0x2);
 
 	ctx->sync_status = 0;
 
@@ -476,6 +477,7 @@ void spi_context_update_rx(struct spi_context *ctx, uint8_t dfs, uint32_t len)
 			spi_context_get_next_buf(&ctx->current_rx,
 						 &ctx->rx_count,
 						 &ctx->rx_len, dfs);
+		__ASSERT_NO_MSG(ctx->rx_buf != (uint8_t *)(uintptr_t)0x2);
 	} else if (ctx->rx_buf) {
 		ctx->rx_buf += dfs * len;
 	}
