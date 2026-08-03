@@ -9,8 +9,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/debug/coredump.h>
 
-uintptr_t z_riscv_get_sp_before_exc(const struct arch_esf *esf);
-
 #ifndef CONFIG_64BIT
 #define ARCH_HDR_VER 3
 #else
@@ -59,7 +57,6 @@ struct riscv_arch_block {
 		uint64_t t4;
 		uint64_t t5;
 		uint64_t t6;
-		uint64_t fp;
 		uint64_t pc;
 	} r;
 #else /* !CONFIG_64BIT */
@@ -184,10 +181,6 @@ void arch_coredump_info_dump(const struct arch_esf *esf)
 #endif /* CONFIG_EXCEPTION_DEBUG */
 
 	arch_blk.r.pc = esf->mepc;
-
-	arch_blk.r.fp = esf->s0;
-	arch_blk.r.sp = z_riscv_get_sp_before_exc(esf);
-	__asm__ volatile ("mv %0, gp" : "=r"(arch_blk.r.gp));
 
 	/* Send for output */
 	coredump_buffer_output((uint8_t *)&hdr, sizeof(hdr));

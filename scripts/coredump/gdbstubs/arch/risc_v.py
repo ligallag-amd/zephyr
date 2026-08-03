@@ -10,10 +10,10 @@ import struct
 
 from gdbstubs.gdbstub import GdbStub
 
-
 logger = logging.getLogger("gdbstub")
 
-class RegNum():
+
+class RegNum:
     ZERO = 0
     RA = 1
     SP = 2
